@@ -2,10 +2,10 @@ import logging
 import sys
 import numpy as np
 
-from keras.models import Model
-from keras.layers import Conv2D, AveragePooling2D, BatchNormalization, Dropout, Input, Activation, Add, Dense, Flatten
-from keras.regularizers import l2
-from keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Conv2D, AveragePooling2D, BatchNormalization, Dropout, Input, Activation, add, Dense, Flatten
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras import backend as K
 
 np.random.seed(2 ** 20)
 
@@ -83,7 +83,7 @@ class WideResNet:
             else:
                 shortcut = net
 
-            return Add([convs, shortcut])
+            return add([convs, shortcut])
 
         return f
 
@@ -97,7 +97,7 @@ class WideResNet:
 
         return f
 
-    #    def create_model(self):
+#    def create_model(self):
     def __call__(self):
         logging.debug("Creating model...")
 

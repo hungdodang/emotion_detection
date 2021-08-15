@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 from model import WideResNet
 
 from array_utility import scale_array
@@ -9,11 +9,28 @@ from image_ultility import snip_bounding_box, create_labeled_bounding_box
 
 EMOTION_MODEL = "emotion_model.hdf5"
 FACE_MODEL = "haarcascade_frontalface_default.xml"
+GENDER_AGE_MODEL = "weights.18-4.06.hdf5"
 
 emotion_classifier = load_model(EMOTION_MODEL)
 emotion_target_size = emotion_classifier.input_shape[1:3]
 
 face_cascade = cv2.CascadeClassifier(FACE_MODEL)
+
+age_gender_model = WideResNet(64, 16, 8)()
+age_gender_model.load_weights(GENDER_AGE_MODEL)
+
+def predict_age_gender(face_image, model):
+    """
+    Determine the age and gender of the face in the picture
+    :param face_image: image of the face
+    :return: (age, gender) of the image
+    """
+    face_imgs = np.empty((1, 64, 64, 3))
+    face_imgs[0, :, :, :] = face_image
+    result = model.predict(face_imgs)
+    est_gender = "F" if result[0][0][0] > 0.5 else "M"
+    est_age = int(result[1][0].dot(np.arange(0, 101).reshape(101, 1)).flatten()[0])
+    return est_age, est_gender
 
 def predict_emotion(face_image, model):
     """
@@ -31,11 +48,11 @@ def predict_emotion(face_image, model):
     gray_image = np.expand_dims(gray_image, -1)
 
     prediction = model.predict(gray_image)
-    emotion_probability = np.max(prediction)
-    emotion_label_index = np.argmax(emotion_probability)
+    emotion_label_index = np.argmax(prediction)
     return emotion_labels[emotion_label_index]
 
 capture = cv2.VideoCapture(0)
+
 while capture.isOpened():
     _, frame = capture.read()
     gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -44,9 +61,14 @@ while capture.isOpened():
 
     for f in faces:
         face_image, area_of_face = snip_bounding_box(frame, f)
-        emotion = predict_emotion(face_image)
-        label = f"{emotion}"
-        create_labeled_bounding_box(frame, area_of_face)
+        try:
+            face_image = cv2.resize(face_image, (emotion_target_size))
+        except:
+            continue
+        age, gender = predict_age_gender(face_image, age_gender_model)
+        emotion = predict_emotion(face_image, emotion_classifier)
+        label = f"{age} {gender} {emotion}"
+        create_labeled_bounding_box(frame, area_of_face, label)
 
     cv2.imshow('Emotion prediction', frame)
 

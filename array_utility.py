@@ -4,5 +4,6 @@ def scale_array(array):
     :param array: input array
     :return: scaled array
     """
+    array = array.astype('float32')
     array = ((array / 255.0) - 0.5) * 2.0
     return array
